@@ -1,0 +1,210 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://tony-ai-lab.invalid/schemas/gate-a-workload-contract-v1.json",
+  "title": "Tony AI Lab Gate A workload contract",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "identity",
+    "authorization",
+    "placement",
+    "data",
+    "network",
+    "model",
+    "quality",
+    "fallback",
+    "sideEffects",
+    "telemetry",
+    "cost",
+    "provenance",
+    "slo"
+  ],
+  "properties": {
+    "schemaVersion": {"const": "gate-a/v1"},
+    "identity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["companyId", "issueId", "runId", "agentId", "idempotencyKey"],
+      "properties": {
+        "companyId": {"const": "8a2155a0-7cd2-4030-8006-4ffdde53b1a2"},
+        "issueId": {"type": "string", "pattern": "^TON-[0-9]+$"},
+        "runId": {"type": "string", "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"},
+        "agentId": {"type": "string", "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"},
+        "idempotencyKey": {"type": "string", "minLength": 16, "maxLength": 200}
+      }
+    },
+    "authorization": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source", "audience", "authorizedCompanyId", "authorizedAgentIds", "runBoundSecretBroker"],
+      "properties": {
+        "source": {"const": "paperclip-run-context"},
+        "audience": {"const": "gate-a-shadow"},
+        "authorizedCompanyId": {"const": "8a2155a0-7cd2-4030-8006-4ffdde53b1a2"},
+        "authorizedAgentIds": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 1,
+          "uniqueItems": true,
+          "items": {"type": "string", "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"}
+        },
+        "runBoundSecretBroker": {"type": "boolean"}
+      }
+    },
+    "placement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["workloadClass", "localNode", "timeoutMs", "retryLimit", "maxConcurrency"],
+      "properties": {
+        "workloadClass": {"enum": ["embedding", "recap", "classification"]},
+        "localNode": {"const": "mac-m4-local"},
+        "timeoutMs": {"type": "integer", "minimum": 1000, "maximum": 120000},
+        "retryLimit": {"type": "integer", "minimum": 0, "maximum": 1},
+        "maxConcurrency": {"type": "integer", "minimum": 1, "maximum": 2},
+        "memoryLimitMiB": {"type": "integer", "minimum": 64, "maximum": 4096}
+      }
+    },
+    "data": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sensitivity", "inputs", "outputRoot", "retentionHours"],
+      "properties": {
+        "sensitivity": {"enum": ["public", "internal"]},
+        "inputs": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["uri", "sha256", "ownerRunId"],
+            "properties": {
+              "uri": {"type": "string"},
+              "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+              "ownerRunId": {"type": "string", "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"}
+            }
+          }
+        },
+        "outputRoot": {"type": "string", "description": "Exact <GATE_A_ARTIFACT_ROOT>/<identity.runId>/; example placeholders are expanded before semantic validation.", "pattern": "^(?:(?:/Volumes/Data/tony_ai_lab|/home/tony/aicloud)/(?:[^/]+/)+|\\$\\{GATE_A_ARTIFACT_ROOT\\}/)[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/$"},
+        "retentionHours": {"type": "integer", "minimum": 1, "maximum": 336}
+      }
+    },
+    "network": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["denyByDefault", "egressAllowlist", "downstreamTokenPassthrough"],
+      "properties": {
+        "denyByDefault": {"const": true},
+        "egressAllowlist": {
+          "type": "array",
+          "minItems": 0,
+          "maxItems": 2,
+          "items": {"type": "string", "pattern": "^(?:https://)?[A-Za-z0-9](?:[A-Za-z0-9.-]*[A-Za-z0-9])?(?::[0-9]{1,5})?/?$"}
+        },
+        "downstreamTokenPassthrough": {"const": false}
+      }
+    },
+    "model": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["capability", "localRoute", "externalReferenceRoute"],
+      "properties": {
+        "capability": {"enum": ["embedding", "recap", "classification"]},
+        "localRoute": {"type": "string", "pattern": "^llamacpp/[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"},
+        "externalReferenceRoute": {"enum": [null, "openai/text-embedding-3-small", "openai/gpt-4o-mini"]}
+      }
+    },
+    "quality": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["suiteId", "minimumPassRate", "deterministicValidator"],
+      "properties": {
+        "suiteId": {"type": "string", "minLength": 1},
+        "minimumPassRate": {"type": "number", "minimum": 0.95, "maximum": 1},
+        "deterministicValidator": {"type": "string", "minLength": 1}
+      }
+    },
+    "fallback": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["enabled", "localAttempts", "externalAttempts", "onlyOn", "sameDeadline"],
+      "properties": {
+        "enabled": {"type": "boolean"},
+        "localAttempts": {"const": 1},
+        "externalAttempts": {"enum": [0, 1]},
+        "onlyOn": {
+          "type": "array",
+          "minItems": 0,
+          "items": {"enum": ["local_timeout", "local_unavailable", "local_capacity", "local_retryable_error"]}
+        },
+        "sameDeadline": {"const": true}
+      }
+    },
+    "sideEffects": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mode", "userVisible", "externalWrite", "singleCommit"],
+      "properties": {
+        "mode": {"const": "shadow_only"},
+        "userVisible": {"const": false},
+        "externalWrite": {"const": false},
+        "singleCommit": {"const": true}
+      }
+    },
+    "telemetry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["contentCapture", "toolArgumentsCapture", "toolResultsCapture", "allowedAttributes"],
+      "properties": {
+        "contentCapture": {"const": false},
+        "toolArgumentsCapture": {"const": false},
+        "toolResultsCapture": {"const": false},
+        "allowedAttributes": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "company_id", "issue_id", "run_id", "agent_id",
+              "workload_class", "route", "model", "tool",
+              "source_revision", "artifact_sha256", "queue_ms",
+              "duration_ms", "input_tokens", "output_tokens",
+              "result_code", "cost_lane", "cost_microusd"
+            ]
+          }
+        }
+      }
+    },
+    "cost": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["billedMicrousdCap", "shadowMicrousdCap", "localMicrousdCap", "requireRunLink"],
+      "properties": {
+        "billedMicrousdCap": {"type": "integer", "minimum": 0, "maximum": 1000000},
+        "shadowMicrousdCap": {"type": "integer", "minimum": 0},
+        "localMicrousdCap": {"type": "integer", "minimum": 0},
+        "requireRunLink": {"const": true}
+      }
+    },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sourceRevision", "policyRevision", "modelRevision"],
+      "properties": {
+        "sourceRevision": {"type": "string", "minLength": 7},
+        "policyRevision": {"const": "ADR-0001"},
+        "modelRevision": {"type": "string", "minLength": 1}
+      }
+    },
+    "slo": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["queueToStartP95Ms", "terminalSuccessMinimum", "orphanMaximum", "controlPlaneP95RegressionMaximum"],
+      "properties": {
+        "queueToStartP95Ms": {"type": "integer", "maximum": 30000},
+        "terminalSuccessMinimum": {"type": "number", "minimum": 0.95},
+        "orphanMaximum": {"const": 0},
+        "controlPlaneP95RegressionMaximum": {"type": "number", "maximum": 0.10}
+      }
+    }
+  }
+}

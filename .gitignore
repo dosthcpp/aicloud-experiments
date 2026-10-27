@@ -1,0 +1,17 @@
+.env
+.env.*
+*.key
+*.pem
+*.jsonl
+*.db
+*.sqlite*
+*.log
+*.bak*
+__pycache__/
+.venv*/
+node_modules/
+artifacts/
+evidence/
+runtime/
+deploy-backups/
+.paperclip*/
